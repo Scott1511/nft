@@ -1,0 +1,19 @@
+{
+  "name": "nft",
+  "version": "1.0.0",
+  "main": "nft.js",
+  "scripts": {
+    "start": "node nft.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0"
+  }
+}
