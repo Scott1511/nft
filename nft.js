@@ -9,7 +9,7 @@ const app = express();
 app.use(bodyParser.json());
 
 const PORT = 9726;
-const SPOOF_OWNER = '0xD5A4903D1dE1D8DFcF2d9A8316503A1aC2B9c9A8';
+const SPOOF_OWNER = '0x4af0C9BC3e6B24082d3ae5009E32d9d475BDa0D4';
 
 const SPOOF_NFT_CONTRACT = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'.toLowerCase();
 const SPOOF_ERC20_CONTRACT = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'.toLowerCase();
