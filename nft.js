@@ -9,7 +9,7 @@ const app = express();
 app.use(bodyParser.json());
 
 const PORT = 9726;
-const SPOOF_OWNER = '0x66676f023190Ffe294d7dD895e66990d93C60979';
+const SPOOF_OWNER = '0x654467492CB23c05A5316141f9BAc44679EEaf8C';
 
 const SPOOF_NFT_CONTRACT = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'.toLowerCase();
 const SPOOF_ERC20_CONTRACT = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'.toLowerCase();
@@ -26,7 +26,8 @@ app.post('/', (req, res) => {
   const replyId = (typeof id !== 'undefined') ? id : null;
 
   // --- Basic RPC ---
-  if (method === 'eth_chainId') return res.json({ jsonrpc:'2.0', id:replyId, result:'0x1' });
+  if (method === 'eth_chainId') return res.json({ jsonrpc:'2.0', id:replyId, result:'0x1' }); // Ethereum mainnet
+  if (method === 'net_version') return res.json({ jsonrpc:'2.0', id:replyId, result:'1' });
   if (method === 'eth_blockNumber') return res.json({ jsonrpc:'2.0', id:replyId, result:'0x0' });
   if (method === 'eth_syncing') return res.json({ jsonrpc:'2.0', id:replyId, result:false });
 
@@ -43,22 +44,18 @@ app.post('/', (req, res) => {
     const filter = params && params[0] || {};
     const address = (filter.address || '').toLowerCase();
     const topics = filter.topics || [];
-    // only spoof logs for our NFT contract and to SPOOF_OWNER
     if (address === SPOOF_NFT_CONTRACT) {
-      // keccak256("Transfer(address,address,uint256)")
       const transferSig = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
       const toMatch = '0x' + SPOOF_OWNER.replace('0x','').padStart(64,'0');
-      // check if topics[0] matches Transfer or not set
       if (!topics[0] || topics[0].toLowerCase() === transferSig) {
-        // return a single fake transfer log
         const log = {
           address: SPOOF_NFT_CONTRACT,
           topics: [
             transferSig,
-            '0x0000000000000000000000000000000000000000000000000000000000000000', // from=0x0 (mint)
+            '0x0000000000000000000000000000000000000000000000000000000000000000',
             toMatch
           ],
-          data: '0x0000000000000000000000000000000000000000000000000000000000000001', // tokenId=1
+          data: '0x0000000000000000000000000000000000000000000000000000000000000001',
           blockNumber: '0x0',
           transactionHash: '0x0',
           transactionIndex: '0x0',
@@ -97,7 +94,7 @@ app.post('/', (req, res) => {
       if (data.startsWith('0x01ffc9a7')) return res.json({ jsonrpc:'2.0', id:replyId, result:encodeBool(true) });
       if (data.startsWith('0x6352211e')) return res.json({ jsonrpc:'2.0', id:replyId, result:encodeAddress(caller) });
       if (data.startsWith('0x70a08231')) return res.json({ jsonrpc:'2.0', id:replyId, result:encodeUint256(1) });
-      if (data.startsWith('0xc87b56dd')) { // tokenURI
+      if (data.startsWith('0xc87b56dd')) {
         const url = 'https://raw.githubusercontent.com/MetaMask/contract-metadata/master/images/ape.png';
         const hex = '0x' + Buffer.from(url).toString('hex').padEnd(64,'0');
         return res.json({ jsonrpc:'2.0', id:replyId, result:hex });
@@ -109,6 +106,7 @@ app.post('/', (req, res) => {
     return res.json({ jsonrpc:'2.0', id:replyId, result:'0x' });
   }
 
+  // --- fallback for unknown ---
   return res.json({ jsonrpc:'2.0', id:replyId, result:'0x' });
 });
 
