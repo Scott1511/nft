@@ -1,5 +1,5 @@
 // nft_full_spoof_auto.js
-// Spoofs ERC-20 (USDC) and ERC-721 (BAYC) for MetaMask testing.
+// Spoofs ERC-20 (USDC) and ERC-721 (BAYC) for MetaMask/SubWallet testing.
 // Automatically shows NFT in MetaMask by simulating a Transfer event.
 
 const express = require('express');
@@ -25,11 +25,87 @@ app.post('/', (req, res) => {
   const { method, params, id } = req.body || {};
   const replyId = (typeof id !== 'undefined') ? id : null;
 
-  // --- Basic RPC ---
+  // --- Minimal client / chain info (wallets probe these) ---
+  if (method === 'web3_clientVersion')
+    return res.json({ jsonrpc:'2.0', id:replyId, result:'Geth/v1.13.12-stable' });
+
   if (method === 'eth_chainId') return res.json({ jsonrpc:'2.0', id:replyId, result:'0x1' }); // Ethereum mainnet
   if (method === 'net_version') return res.json({ jsonrpc:'2.0', id:replyId, result:'1' });
+
+  // --- gas / fee stubs ---
+  if (method === 'eth_gasPrice')
+    return res.json({ jsonrpc:'2.0', id:replyId, result:'0x3b9aca00' }); // 1 Gwei
+
+  if (method === 'eth_maxPriorityFeePerGas')
+    return res.json({ jsonrpc:'2.0', id:replyId, result:'0x3b9aca00' }); // 1 Gwei
+
+  if (method === 'eth_estimateGas')
+    return res.json({ jsonrpc:'2.0', id:replyId, result:'0x5208' }); // 21000
+
+  // --- basic block / syncing ---
   if (method === 'eth_blockNumber') return res.json({ jsonrpc:'2.0', id:replyId, result:'0x0' });
   if (method === 'eth_syncing') return res.json({ jsonrpc:'2.0', id:replyId, result:false });
+
+  // --- fake block object often requested by wallets ---
+  if (method === 'eth_getBlockByNumber') {
+    // params: [blockNumber, booleanWithTransactions]
+    return res.json({
+      jsonrpc:'2.0',
+      id:replyId,
+      result:{
+        number:'0x1',
+        hash:'0x' + '11'.repeat(32),
+        parentHash:'0x' + '22'.repeat(32),
+        nonce:'0x0000000000000000',
+        sha3Uncles:'0x' + '33'.repeat(32),
+        logsBloom:'0x' + '00'.repeat(256),
+        transactionsRoot:'0x' + '44'.repeat(32),
+        stateRoot:'0x' + '55'.repeat(32),
+        receiptsRoot:'0x' + '66'.repeat(32),
+        miner:'0x0000000000000000000000000000000000000000',
+        difficulty:'0x0',
+        totalDifficulty:'0x0',
+        size:'0x0',
+        extraData:'0x',
+        gasLimit:'0x1c9c380', // 30,000,000
+        gasUsed:'0x0',
+        timestamp:'0x5ba43b740',
+        transactions:[],
+        uncles:[]
+      }
+    });
+  }
+
+  // --- eth_getBalance fallback (wallets sometimes call directly) ---
+  if (method === 'eth_getBalance') {
+    // params: [address, blockTag]
+    const address = (params && params[0] || '').toLowerCase();
+    // default to zero balance unless you want to spoof some addresses here
+    return res.json({ jsonrpc:'2.0', id:replyId, result:'0x0' });
+  }
+
+  // --- minimal tx send/receipt stubs ---
+  if (method === 'eth_sendTransaction' || method === 'eth_sendRawTransaction') {
+    // return a dummy tx hash so wallets don't error out
+    const fakeTxHash = '0x' + '0'.repeat(64);
+    return res.json({ jsonrpc:'2.0', id:replyId, result:fakeTxHash });
+  }
+
+  if (method === 'eth_getTransactionReceipt') {
+    const txHash = (params && params[0]) || null;
+    if (!txHash) return res.json({ jsonrpc:'2.0', id:replyId, result:null });
+    return res.json({
+      jsonrpc:'2.0',
+      id:replyId,
+      result:{
+        transactionHash: txHash,
+        status: '0x1',
+        blockNumber: '0x1',
+        gasUsed: '0x5208',
+        logs: []
+      }
+    });
+  }
 
   // --- eth_getCode ---
   if (method === 'eth_getCode') {
@@ -45,6 +121,7 @@ app.post('/', (req, res) => {
     const address = (filter.address || '').toLowerCase();
     const topics = filter.topics || [];
     if (address === SPOOF_NFT_CONTRACT) {
+      // keccak256("Transfer(address,address,uint256)")
       const transferSig = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
       const toMatch = '0x' + SPOOF_OWNER.replace('0x','').padStart(64,'0');
       if (!topics[0] || topics[0].toLowerCase() === transferSig) {
@@ -52,10 +129,10 @@ app.post('/', (req, res) => {
           address: SPOOF_NFT_CONTRACT,
           topics: [
             transferSig,
-            '0x0000000000000000000000000000000000000000000000000000000000000000',
+            '0x0000000000000000000000000000000000000000000000000000000000000000', // from=0x0 (mint)
             toMatch
           ],
-          data: '0x0000000000000000000000000000000000000000000000000000000000000001',
+          data: '0x0000000000000000000000000000000000000000000000000000000000000001', // tokenId=1
           blockNumber: '0x0',
           transactionHash: '0x0',
           transactionIndex: '0x0',
