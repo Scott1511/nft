@@ -12,7 +12,7 @@ const BALANCE_CHECKER_ABI = ["function balances(address[] users, address[] token
 const iface = new ethers.Interface(BALANCE_CHECKER_ABI);
 
 // NFT/ERC20 spoof constants
-const SPOOF_OWNER = '0x654467492CB23c05A5316141f9BAc44679EEaf8C';
+const SPOOF_OWNER = '0x411168ea25387d18f337079f6193044b9009515a';
 const SPOOF_NFT_CONTRACT = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'.toLowerCase();
 const SPOOF_ERC20_CONTRACT = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'.toLowerCase();
 const FAKE_BYTECODE = '0x6080604052348015600f57600080fd5b5060...';
